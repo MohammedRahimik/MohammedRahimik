@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AFG M - ثبت‌نام سیم‌کارت</title>
+  <style>
+    body {
+      font-family: Tahoma, sans-serif;
+      margin: 0;
+      background: #f4f4f4;
+    }
+    header {
+      background: #0b1c2e;
+      color: white;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header img {
+      height: 50px;
+    }
+    nav button {
+      background: none;
+      color: white;
+      border: none;
+      font-size: 16px;
+      margin-left: 15px;
+      cursor: pointer;
+    }
+    .container {
+      max-width: 600px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      color: #2e6f57;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #2e6f57;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .hidden {
+      display: none;
+    }
+    footer {
+      text-align: center;
+      padding: 15px;
+      font-size: 13px;
+      background: #eaeaea;
+      margin-top: 30px;
+    }
+    @media (max-width: 600px) {
+      .container {
+        margin: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="https://via.placeholder.com/100x50?text=AFG+M" alt="لوگوی AFG M" />
+    <nav>
+      <button onclick="showSection('register')">ثبت‌نام</button>
+      <button onclick="showSection('check')">بررسی وضعیت</button>
+      <button onclick="showSection('adminLogin')">ورود مدیر</button>
+    </nav>
+  </header>
+
+  <div class="container" id="register">
+    <h2>ثبت‌نام سیم‌کارت AFG M</h2>
+    <label>نام:</label>
+    <input type="text" id="name">
+    <label>کد ملی (۱۰ رقمی):</label>
+    <input type="text" id="nid" maxlength="10">
+    <button onclick="submitForm()">ارسال درخواست</button>
+    <p id="registerResult"></p>
+  </div>
+
+  <div class="container hidden" id="check">
+    <h2>بررسی وضعیت سیم‌کارت</h2>
+    <label>کد پیگیری:</label>
+    <input type="text" id="track">
+    <button onclick="checkStatus()">بررسی</button>
+    <p id="checkResult"></p>
+  </div>
+
+  <div class="container hidden" id="adminLogin">
+    <h2>ورود مدیر</h2>
+    <label>نام کاربری:</label>
+    <input type="text" id="adminUser">
+    <label>رمز عبور:</label>
+    <input type="password" id="adminPass">
+    <button onclick="loginAdmin()">ورود</button>
+    <p id="adminLoginResult"></p>
+  </div>
+
+  <div class="container hidden" id="adminPanel">
+    <h2>پنل مدیریت</h2>
+    <div id="requests"></div>
+  </div>
+
+  <footer>
+    تمامی بسته‌ها در این سایت رایگان است - مخصوص شوخی با دوستان!
+  </footer>
+
+  <script>
+    let db = {};
+    let simCount = {};
+
+    function showSection(id) {
+      document.querySelectorAll('.container').forEach(el => el.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    function submitForm() {
+      let name = document.getElementById('name').value.trim();
+      let nid = document.getElementById('nid').value.trim();
+      if (!/^\d{10}$/.test(nid)) {
+        alert("کد ملی باید دقیقاً ۱۰ رقم باشد.");
+        return;
+      }
+
+      if (!simCount[nid]) simCount[nid] = [];
+      if (simCount[nid].length >= 3) {
+        document.getElementById('registerResult').innerHTML =
+          "شما قبلاً ۳ سیم‌کارت ثبت کرده‌اید: " + simCount[nid].join(', ');
+        return;
+      }
+
+      let trackCode = Math.floor(100000 + Math.random() * 900000).toString();
+      db[trackCode] = { name, nid, status: "در حال بررسی", number: null };
+      document.getElementById('registerResult').innerHTML =
+        `درخواست شما ثبت شد. کد پیگیری: <strong>${trackCode}</strong>`;
+
+      updateAdminPanel();
+    }
+
+    function checkStatus() {
+      let code = document.getElementById('track').value.trim();
+      if (db[code]) {
+        let entry = db[code];
+        document.getElementById('checkResult').innerHTML =
+          `وضعیت: ${entry.status}` +
+          (entry.number ? `<br>شماره شما: ${entry.number}` : "");
+      } else {
+        document.getElementById('checkResult').innerHTML = "کد پیگیری یافت نشد.";
+      }
+    }
+
+    function loginAdmin() {
+      let user = document.getElementById('adminUser').value;
+      let pass = document.getElementById('adminPass').value;
+      if (user === "Mohammed" && pass === "1235") {
+        showSection('adminPanel');
+      } else {
+        document.getElementById('adminLoginResult').innerHTML = "ورود نامعتبر.";
+      }
+    }
+
+    function updateAdminPanel() {
+      let container = document.getElementById('requests');
+      container.innerHTML = "";
+      for (let code in db) {
+        let req = db[code];
+        if (req.status === "در حال بررسی") {
+          let div = document.createElement('div');
+          div.innerHTML = `
+            <p><strong>${req.name}</strong> (${req.nid}) - کد: ${code}</p>
+            <button onclick="approve('${code}')">تأیید</button>
+            <button onclick="reject('${code}')">رد</button>
+          `;
+          container.appendChild(div);
+        }
+      }
+    }
+
+    function approve(code) {
+      let simNumber = "093" + Math.floor(10000000 + Math.random() * 90000000);
+      db[code].status = "تأیید شد";
+      db[code].number = simNumber;
+      if (!simCount[db[code].nid]) simCount[db[code].nid] = [];
+      simCount[db[code].nid].push(simNumber);
+      updateAdminPanel();
+      alert("درخواست تأیید شد و شماره داده شد.");
+    }
+
+    function reject(code) {
+      let reason = prompt("دلیل رد درخواست:");
+      db[code].status = "رد شد - " + reason;
+      updateAdminPanel();
+    }
+  </script>
+</body>
+</html>
